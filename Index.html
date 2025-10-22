@@ -1,104 +1,21 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <title>Quiz de vocabulaire allemand</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 600px;
-            margin: 50px auto;
-            text-align: center;
-        }
-        input, button {
-            padding: 10px;
-            margin: 10px;
-            font-size: 16px;
-        }
-        .correct { color: green; }
-        .wrong { color: red; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quiz de vocabulaire allemand A1–B1</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <h1>Quiz de vocabulaire allemand</h1>
-    <p id="question">Question apparaîtra ici</p>
-    <input type="text" id="answer" placeholder="Votre réponse">
-    <button onclick="checkAnswer()">Valider</button>
-    <p id="feedback"></p>
-    <p id="score"></p>
+  <h1>Quiz de vocabulaire allemand 🇩🇪</h1>
+  <p id="question">Chargement...</p>
 
-    <script>
-        // Liste des mots (allemand : français)
-        const vocabulary = [
-            {de: "das Arbeitszimmer", fr: "le bureau"},
-            {de: "die Nachbarin", fr: "la voisine"},
-            {de: "die Nachbarn", fr: "les voisins"},
-            {de: "das Gebäude", fr: "le bâtiment"},
-            {de: "das Erdgeschoss", fr: "le rez-de-chaussée"},
-            {de: "Quadratmeter", fr: "mètre carré"},
-            {de: "die Aussicht", fr: "la vue"},
-            {de: "einziehen", fr: "emménager"},
-            {de: "ausziehen", fr: "déménager / enlever un vêtement"}
-            {de: "sprechen", fr: "parler"},
-    {de: "verkaufen", fr: "vendre"},
-    {de: "arbeiten", fr: "travailler"},
-    {de: "sehen", fr: "voir"},
-    {de: "gehen", fr: "aller"},
-    {de: "kommen", fr: "venir"},
-    {de: "kaufen", fr: "acheter"},
-    {de: "haben", fr: "avoir"},
-    {de: "schließen", fr: "fermer"},
-    {de: "lernen", fr: "apprendre"},
-    {de: "trinken", fr: "boire"},
-    {de: "spielen", fr: "jouer"},
-    {de: "essen", fr: "manger"},
-    {de: "öffnen", fr: "ouvrir"},
-    {de: "machen", fr: "faire"},
-    {de: "lesen", fr: "lire"},
-    {de: "brauchen", fr: "avoir besoin"},
-    {de: "wohnen", fr: "habiter"},
-    {de: "sein", fr: "être"}
-        ];
+  <input type="text" id="answer" placeholder="Votre réponse">
+  <button id="validate">Valider</button>
 
-        let score = 0;
-        let current = null;
-        let direction = "de-to-fr"; // par défaut
+  <p id="feedback"></p>
+  <p id="score">Score : 0</p>
 
-        function nextQuestion() {
-            const index = Math.floor(Math.random() * vocabulary.length);
-            current = vocabulary[index];
-
-            // Choisir aléatoirement la direction
-            direction = Math.random() < 0.5 ? "de-to-fr" : "fr-to-de";
-
-            if(direction === "de-to-fr") {
-                document.getElementById("question").textContent = `Traduire en français : "${current.de}"`;
-            } else {
-                document.getElementById("question").textContent = `Traduire en allemand : "${current.fr}"`;
-            }
-
-            document.getElementById("answer").value = "";
-            document.getElementById("feedback").textContent = "";
-        }
-
-        function checkAnswer() {
-            const userAnswer = document.getElementById("answer").value.trim().toLowerCase();
-            let correctAnswer = direction === "de-to-fr" ? current.fr.toLowerCase() : current.de.toLowerCase();
-
-            if(userAnswer === correctAnswer) {
-                document.getElementById("feedback").textContent = "Correct ! ✅";
-                document.getElementById("feedback").className = "correct";
-                score++;
-            } else {
-                document.getElementById("feedback").textContent = `Faux ❌ La bonne réponse était : ${correctAnswer}`;
-                document.getElementById("feedback").className = "wrong";
-            }
-
-            document.getElementById("score").textContent = `Score : ${score}`;
-            setTimeout(nextQuestion, 2000);
-        }
-
-        nextQuestion();
-    </script>
+  <script src="script.js"></script>
 </body>
 </html>
