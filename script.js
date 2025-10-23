@@ -1,4 +1,4 @@
-// script.js — version corrigée : pause manuelle + "revoir mes fautes" fonctionnel
+// script.js — quiz allemand/français amélioré
 
 let vocabulary = [];
 let score = 0;
@@ -10,12 +10,10 @@ let direction = "de-to-fr";
 let selectedTheme = "";
 let speedSetting = "normal";
 let reviewingMistakes = false;
-let awaitingContinue = false; // vrai quand on attend que l'utilisateur clique "Continuer"
+let awaitingContinue = false;
 
-// thèmes disponibles
 const themes = ["maison", "sport", "sante", "ecole", "general"];
 
-// éléments DOM
 const menuEl = document.getElementById("menu");
 const configEl = document.getElementById("config");
 const quizEl = document.getElementById("quiz");
@@ -59,24 +57,20 @@ startBtn.addEventListener("click", () => {
 });
 
 validateBtn.addEventListener("click", () => {
-  // si on attend le bouton "Continuer", ne pas valider
   if (awaitingContinue) return;
   checkAnswer();
 });
 
 skipBtn.addEventListener("click", () => {
   if (awaitingContinue) return;
-  // enregistrer comme incorrect et passer à la suite
   recordResult("", false);
   scoreEl.textContent = `Score : ${score} / ${usedWords.length}`;
-  nextQuestion();
+  nextQuestionWithDirection();
 });
 
-// Enter : valide si possible, sinon ignore (ou active "Continuer" si on attend)
 answerEl.addEventListener("keydown", (e) => {
   if (e.key === "Enter") {
     if (awaitingContinue) {
-      // si on attend la confirmation, simuler le clic sur "Continuer"
       const cont = document.getElementById("continueBtn");
       if (cont) cont.click();
     } else {
@@ -95,9 +89,7 @@ async function loadVocabulary(theme) {
         const response = await fetch(`vocab/${f}.json`);
         if (!response.ok) throw new Error(`Impossible de charger vocab/${f}.json`);
         const data = await response.json();
-        data.forEach(e => {
-          e._src = f;
-        });
+        data.forEach(e => { e._src = f; });
         vocabulary = vocabulary.concat(data);
       }
     } else {
@@ -106,8 +98,7 @@ async function loadVocabulary(theme) {
       vocabulary = await response.json();
       vocabulary.forEach(e => (e._src = theme));
     }
-    // indexes utiles
-    vocabulary.forEach((e, i) => (e._idx = i));
+    vocabulary.forEach((e,i) => e._idx = i);
   } catch (err) {
     alert("Erreur de chargement du vocabulaire ! Ouvre la console pour détails.");
     console.error(err);
@@ -125,12 +116,11 @@ function startQuiz(fromMistakes = false) {
   awaitingContinue = false;
   themeLabelEl.textContent = reviewingMistakes ? "Révision des erreurs" : `Thème : ${selectedTheme}`;
   scoreEl.textContent = `Score : 0 / 0`;
-  nextQuestion();
+  nextQuestionWithDirection();
 }
 
 // ----- question suivante -----
-function nextQuestion() {
-  // réinitialiser état d'attente
+function nextQuestionWithDirection() {
   awaitingContinue = false;
   validateBtn.disabled = false;
   skipBtn.disabled = false;
@@ -144,7 +134,12 @@ function nextQuestion() {
 
   usedWords.push(idx);
   current = vocabulary[idx];
-  direction = Math.random() < 0.5 ? "de-to-fr" : "fr-to-de";
+
+  if (current.direction) {
+    direction = current.direction;
+  } else {
+    direction = Math.random() < 0.5 ? "de-to-fr" : "fr-to-de";
+  }
 
   questionEl.textContent =
     direction === "de-to-fr"
@@ -165,14 +160,14 @@ function normalize(str) {
   return String(str)
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[’'"\-\u2010-\u2015]/g, "") // apostrophes et tirets variés
-    .replace(/[.,;:!?()]/g, "") // ponctuation courante
+    .replace(/[’'"\-\u2010-\u2015]/g, "")
+    .replace(/[.,;:!?()]/g, "")
     .replace(/\s+/g, " ")
     .trim()
     .toLowerCase();
 }
 
-// ----- calcul délai (utile uniquement pour bonnes réponses) -----
+// ----- délai pour bonnes réponses -----
 function getDelay(isCorrect) {
   const speeds = {
     fast: isCorrect ? 500 : 1500,
@@ -184,31 +179,26 @@ function getDelay(isCorrect) {
 
 // ----- enregistrement résultat -----
 function recordResult(givenRaw, isCorrect) {
-  // on stocke la direction et les deux formes pour permettre la révision
-  const entry = {
+  results.push({
     de: current.de,
     fr: current.fr,
-    direction, // "de-to-fr" ou "fr-to-de"
+    direction,
     expected: direction === "de-to-fr" ? current.fr : current.de,
     given: givenRaw,
     isCorrect
-  };
-  results.push(entry);
+  });
 }
 
 // ----- vérification réponse -----
 function checkAnswer() {
-  // si on est en attente de "Continuer", on ignore validation
   if (awaitingContinue) return;
 
   const userRaw = answerEl.value;
   const user = normalize(userRaw);
   const correct = normalize(direction === "de-to-fr" ? current.fr : current.de);
-
   const isCorrect = user === correct;
   recordResult(userRaw, isCorrect);
 
-  // désactiver validations pendant l'affichage
   validateBtn.disabled = true;
   skipBtn.disabled = true;
 
@@ -217,10 +207,8 @@ function checkAnswer() {
     feedbackEl.className = "correct";
     score++;
     scoreEl.textContent = `Score : ${score} / ${usedWords.length}`;
-    // courte pause puis suivante (automatique pour les bonnes réponses)
-    setTimeout(nextQuestion, getDelay(true));
+    setTimeout(nextQuestionWithDirection, getDelay(true));
   } else {
-    // FAUX : afficher correction + bouton "Continuer" et attendre l'action utilisateur
     awaitingContinue = true;
     const expected = direction === "de-to-fr" ? current.fr : current.de;
     feedbackEl.innerHTML = `
@@ -231,14 +219,11 @@ function checkAnswer() {
     `;
     feedbackEl.className = "wrong";
 
-    // focus sur le bouton Continuer
-    const contBtn = document.getElementById("continueBtn");
-    contBtn.focus();
-    contBtn.addEventListener("click", () => {
+    document.getElementById("continueBtn").focus();
+    document.getElementById("continueBtn").addEventListener("click", () => {
       awaitingContinue = false;
-      // mise à jour du score affiché (reste inchangé)
       scoreEl.textContent = `Score : ${score} / ${usedWords.length}`;
-      nextQuestion();
+      nextQuestionWithDirection();
     });
   }
 }
@@ -246,7 +231,7 @@ function checkAnswer() {
 // ----- fin de session + option "revoir mes fautes" -----
 function endSession() {
   const mistakes = results.filter(r => !r.isCorrect);
-  // construction de la page de récap
+
   document.body.innerHTML = `
     <div style="padding:24px; text-align:center;">
       <h1>Session terminée 🎉</h1>
@@ -270,23 +255,23 @@ function endSession() {
     recapEl.appendChild(li);
   });
 
-  document.getElementById("restart").addEventListener("click", () => {
-    // relancer même thème / même configuration (retour à la page)
-    location.reload();
-  });
-  document.getElementById("toMenu").addEventListener("click", () => {
-    location.href = location.pathname;
-  });
+  document.getElementById("restart").addEventListener("click", () => location.reload());
+  document.getElementById("toMenu").addEventListener("click", () => location.href = location.pathname);
 
   const reviewBtn = document.getElementById("reviewMistakes");
   if (reviewBtn) {
     reviewBtn.addEventListener("click", () => {
-      // reconstruire vocabulary à partir des erreurs (en conservant de/fr)
-      const mistakesData = mistakes.map(m => ({ de: m.de, fr: m.fr }));
-      vocabulary = mistakesData;
+      vocabulary = mistakes.map(m => ({
+        de: m.de,
+        fr: m.fr,
+        direction: m.direction
+      }));
       total = vocabulary.length;
-      // démarrer la révision (mode special)
-      startQuiz(true);
+      usedWords = [];
+      results = [];
+      reviewingMistakes = true;
+      awaitingContinue = false;
+      nextQuestionWithDirection();
     });
   }
 }
