@@ -7,40 +7,42 @@ let current = null;
 let direction = "de-to-fr";
 let selectedTheme = "";
 
-// Liste des thèmes disponibles (doit correspondre aux fichiers .json dans /vocab/)
-const themes = ["maison", "sport", "sante", "ecole"];
+// Thèmes disponibles
+const themes = ["maison", "sport", "sante", "ecole", "general"];
 
-// --- Sélection du thème ---
-async function selectTheme() {
-  let themeList = "Choisis un thème parmi :\n\n";
-  themes.forEach((t, i) => themeList += `${i + 1}. ${t}\n`);
-  
-  const choice = prompt(themeList);
-  const index = parseInt(choice) - 1;
-  
-  if (index >= 0 && index < themes.length) {
-    selectedTheme = themes[index];
+// Attacher les événements aux boutons du menu
+document.querySelectorAll(".theme-btn").forEach(btn => {
+  btn.addEventListener("click", async () => {
+    selectedTheme = btn.dataset.theme;
     await loadVocabulary(selectedTheme);
+    document.getElementById("menu").classList.add("hidden");
+    document.getElementById("quiz").classList.remove("hidden");
     startQuiz();
-  } else {
-    alert("Choix invalide. Essaie encore !");
-    selectTheme();
-  }
-}
+  });
+});
 
-// --- Chargement du vocabulaire ---
+// Charger le vocabulaire
 async function loadVocabulary(theme) {
   try {
-    const response = await fetch(`vocab/${theme}.json`);
-    vocabulary = await response.json();
-    console.log(`Vocabulaire "${theme}" chargé (${vocabulary.length} mots)`);
+    if (theme === "general") {
+      const allFiles = ["maison", "sport", "sante", "ecole"];
+      vocabulary = [];
+      for (const f of allFiles) {
+        const response = await fetch(`vocab/${f}.json`);
+        const data = await response.json();
+        vocabulary = vocabulary.concat(data);
+      }
+    } else {
+      const response = await fetch(`vocab/${theme}.json`);
+      vocabulary = await response.json();
+    }
   } catch (error) {
     alert("Erreur de chargement du fichier de vocabulaire !");
     console.error(error);
   }
 }
 
-// --- Démarrage du quiz ---
+// Démarrer le quiz
 function startQuiz() {
   const input = prompt(`Combien de mots veux-tu tester ? (max : ${vocabulary.length})`);
   total = Math.min(parseInt(input) || 10, vocabulary.length);
@@ -50,7 +52,7 @@ function startQuiz() {
   nextQuestion();
 }
 
-// --- Nouvelle question ---
+// Afficher une question
 function nextQuestion() {
   if (usedWords.length >= total) {
     endSession();
@@ -76,7 +78,7 @@ function nextQuestion() {
   document.getElementById("score").textContent = `Mot ${usedWords.length + 1} sur ${total}`;
 }
 
-// --- Vérification ---
+// Vérifier la réponse
 function checkAnswer() {
   const userAnswer = document.getElementById("answer").value.trim().toLowerCase();
   const correctAnswer = (direction === "de-to-fr" ? current.fr : current.de).toLowerCase();
@@ -102,7 +104,7 @@ function checkAnswer() {
   setTimeout(nextQuestion, 1500);
 }
 
-// --- Fin de session ---
+// Fin du quiz
 function endSession() {
   document.body.innerHTML = `
     <h1>Session terminée 🎉</h1>
@@ -127,4 +129,3 @@ function endSession() {
 }
 
 document.getElementById("validate").addEventListener("click", checkAnswer);
-window.onload = selectTheme;
