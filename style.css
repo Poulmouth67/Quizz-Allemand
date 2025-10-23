@@ -1,32 +1,91 @@
 body {
-  font-family: Arial, sans-serif;
-  max-width: 600px;
-  margin: 50px auto;
-  text-align: center;
-  background: #f7f7f7;
+  font-family: 'Segoe UI', sans-serif;
+  background: #f4f4f8;
   color: #333;
+  text-align: center;
+  padding: 40px;
+}
+
+h1 {
+  color: #222;
+  margin-bottom: 10px;
+}
+
+h2 {
+  color: #555;
+  font-weight: normal;
+  margin-bottom: 20px;
+}
+
+.menu .buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 15px;
+}
+
+.theme-btn {
+  padding: 12px 25px;
+  font-size: 18px;
+  border: none;
   border-radius: 12px;
-  padding: 30px;
-  box-shadow: 0 0 20px rgba(0,0,0,0.1);
+  background: #fff;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
-input, button {
+.theme-btn:hover {
+  background: #007bff;
+  color: white;
+  transform: scale(1.05);
+}
+
+.hidden {
+  display: none;
+}
+
+#quiz {
+  max-width: 500px;
+  margin: auto;
+}
+
+#answer {
   padding: 10px;
-  margin: 10px;
+  width: 80%;
   font-size: 16px;
-  border-radius: 6px;
-  border: 1px solid #ccc;
+  margin-bottom: 10px;
 }
 
-button {
-  background-color: #0078d7;
+#validate {
+  padding: 10px 20px;
+  font-size: 16px;
+  border: none;
+  border-radius: 8px;
+  background: #007bff;
   color: white;
   cursor: pointer;
+  transition: background 0.2s;
 }
 
-button:hover {
-  background-color: #005fa3;
+#validate:hover {
+  background: #0056b3;
 }
 
-.correct { color: green; font-weight: bold; }
-.wrong { color: red; font-weight: bold; }
+.correct {
+  color: green;
+}
+
+.wrong {
+  color: red;
+}
+
+ul#recap {
+  text-align: left;
+  margin: 20px auto;
+  max-width: 600px;
+}
+
+ul#recap li {
+  margin-bottom: 5px;
+}
