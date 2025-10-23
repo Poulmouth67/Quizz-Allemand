@@ -6,7 +6,8 @@ let results = [];
 let current = null;
 let direction = "de-to-fr";
 let selectedTheme = "";
-let speedSetting = "normal"; // vitesse choisie
+let speedSetting = "normal";
+let reviewingMistakes = false; // mode révision des erreurs
 
 const themes = ["maison", "sport", "sante", "ecole", "general"];
 
@@ -25,7 +26,7 @@ const validateBtn = document.getElementById("validate");
 const skipBtn = document.getElementById("skip");
 const startBtn = document.getElementById("startSession");
 const backBtn = document.getElementById("backToMenu");
-const speedEl = document.getElementById("speed"); // ajout du select
+const speedEl = document.getElementById("speed");
 
 document.querySelectorAll(".theme-btn").forEach(btn => {
   btn.addEventListener("click", async () => {
@@ -54,7 +55,7 @@ startBtn.addEventListener("click", () => {
 validateBtn.addEventListener("click", checkAnswer);
 skipBtn.addEventListener("click", () => {
   recordResult("", false);
-  setTimeout(nextQuestion, 600);
+  nextQuestion();
 });
 
 answerEl.addEventListener("keydown", e => {
@@ -83,18 +84,26 @@ async function loadVocabulary(theme) {
   }
 }
 
-function startQuiz() {
+function startQuiz(fromMistakes = false) {
   configEl.classList.add("hidden");
   quizEl.classList.remove("hidden");
   score = 0;
   usedWords = [];
   results = [];
-  themeLabelEl.textContent = `Thème : ${selectedTheme}`;
+  reviewingMistakes = fromMistakes;
+  themeLabelEl.textContent = reviewingMistakes
+    ? "Révision des erreurs"
+    : `Thème : ${selectedTheme}`;
   scoreEl.textContent = `Score : 0 / 0`;
   nextQuestion();
 }
 
 function nextQuestion() {
+  feedbackEl.textContent = "";
+  feedbackEl.innerHTML = "";
+  validateBtn.disabled = false;
+  skipBtn.disabled = false;
+
   if (usedWords.length >= total) return endSession();
 
   let idx;
@@ -113,7 +122,6 @@ function nextQuestion() {
 
   answerEl.value = "";
   answerEl.focus();
-  feedbackEl.textContent = "";
   progressEl.textContent = `Mot ${usedWords.length} / ${total}`;
   scoreEl.textContent = `Score : ${score} / ${usedWords.length - 1}`;
 }
@@ -146,17 +154,28 @@ function checkAnswer() {
   const isCorrect = userAnswer === correctAnswer;
   recordResult(userAnswer, isCorrect);
 
+  validateBtn.disabled = true;
+  skipBtn.disabled = true;
+
   if (isCorrect) {
     feedbackEl.textContent = "✅ Correct !";
     feedbackEl.className = "correct";
     score++;
+    scoreEl.textContent = `Score : ${score} / ${usedWords.length}`;
+    setTimeout(nextQuestion, getDelay(true));
   } else {
-    feedbackEl.textContent = `❌ Faux — attendu : ${direction === "de-to-fr" ? current.fr : current.de}`;
+    feedbackEl.innerHTML = `
+      ❌ Faux — attendu : <strong>${
+        direction === "de-to-fr" ? current.fr : current.de
+      }</strong><br>
+      <button id="continueBtn">Continuer</button>
+    `;
     feedbackEl.className = "wrong";
-  }
 
-  scoreEl.textContent = `Score : ${score} / ${usedWords.length}`;
-  setTimeout(nextQuestion, getDelay(isCorrect));
+    document
+      .getElementById("continueBtn")
+      .addEventListener("click", () => nextQuestion());
+  }
 }
 
 function recordResult(answer, isCorrect) {
@@ -170,16 +189,26 @@ function recordResult(answer, isCorrect) {
 }
 
 function endSession() {
+  const mistakes = results.filter(r => !r.isCorrect);
   document.body.innerHTML = `
     <div style="padding:24px; text-align:center;">
       <h1>Session terminée 🎉</h1>
-      <p>Thème : <strong>${selectedTheme}</strong></p>
+      <p>${
+        reviewingMistakes
+          ? "Fin de la révision des erreurs"
+          : `Thème : <strong>${selectedTheme}</strong>`
+      }</p>
       <p>Score : <strong>${score} / ${total}</strong></p>
       <h2>Récapitulatif</h2>
       <ul id="recap"></ul>
       <div style="margin-top:16px;">
         <button id="restart">Recommencer</button>
         <button id="toMenu">Retour au menu</button>
+        ${
+          !reviewingMistakes && mistakes.length > 0
+            ? `<button id="reviewMistakes">Revoir mes fautes (${mistakes.length})</button>`
+            : ""
+        }
       </div>
     </div>
   `;
@@ -194,4 +223,16 @@ function endSession() {
 
   document.getElementById("restart").addEventListener("click", () => location.reload());
   document.getElementById("toMenu").addEventListener("click", () => location.href = location.pathname);
+
+  const reviewBtn = document.getElementById("reviewMistakes");
+  if (reviewBtn) {
+    reviewBtn.addEventListener("click", () => {
+      vocabulary = mistakes.map(m => ({
+        de: m.direction === "de-to-fr" ? m.question : m.expected,
+        fr: m.direction === "de-to-fr" ? m.expected : m.question
+      }));
+      total = vocabulary.length;
+      startQuiz(true);
+    });
+  }
 }
