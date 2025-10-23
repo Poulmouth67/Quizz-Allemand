@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Quiz Vocabulaire Allemand</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div id="menu" class="menu">
@@ -18,11 +18,33 @@
     </div>
   </div>
 
+  <!-- Écran de configuration (choix nombre de mots) -->
+  <div id="config" class="config hidden">
+    <h2 id="config-title">Thème</h2>
+    <label for="nbWords">Nombre de mots à tester :</label>
+    <input id="nbWords" type="number" min="1" value="10" />
+    <div class="config-buttons">
+      <button id="startSession">Démarrer la session</button>
+      <button id="backToMenu">Retour</button>
+    </div>
+  </div>
+
+  <!-- Quiz -->
   <div id="quiz" class="quiz hidden">
+    <div class="topbar">
+      <p id="themeLabel"></p>
+      <p id="progress"></p>
+    </div>
+
     <h1>Quiz de vocabulaire 🇩🇪</h1>
     <p id="question">Chargement...</p>
-    <input type="text" id="answer" placeholder="Ta réponse ici">
-    <button id="validate">Valider</button>
+
+    <input type="text" id="answer" placeholder="Ta réponse ici" autocomplete="off" />
+    <div class="controls">
+      <button id="validate">Valider</button>
+      <button id="skip">Passer</button>
+    </div>
+
     <p id="feedback"></p>
     <p id="score"></p>
   </div>
