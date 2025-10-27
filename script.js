@@ -12,7 +12,7 @@ let speedSetting = "normal";
 let reviewingMistakes = false;
 let awaitingContinue = false;
 
-const themes = ["maison", "sport", "sante", "ecole", "temps", "general"];
+const themes = ["maison", "sport", "sante", "ecole", "temps", "adverbes", "general"];
 
 const menuEl = document.getElementById("menu");
 const configEl = document.getElementById("config");
