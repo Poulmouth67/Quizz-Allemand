@@ -6,7 +6,6 @@
   { "fr": "Vendredi", "de": "Freitag" },
   { "fr": "Samedi", "de": "Samstag" },
   { "fr": "Dimanche", "de": "Sonntag" },
-
   { "fr": "les mois", "de": "die Monaten" },
   { "fr": "Janvier", "de": "Januar" },
   { "fr": "Février", "de": "Februar" },
@@ -20,7 +19,6 @@
   { "fr": "Octobre", "de": "Oktober" },
   { "fr": "Novembre", "de": "November" },
   { "fr": "Décembre", "de": "Dezember" },
-
   { "fr": "les saisons", "de": "die Jahreszeiten" },
   { "fr": "Le printemps", "de": "der Frühling" },
   { "fr": "L’été", "de": "der Sommer" },
