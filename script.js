@@ -12,7 +12,7 @@ let speedSetting = "normal";
 let reviewingMistakes = false;
 let awaitingContinue = false;
 
-const themes = ["maison", "sport", "sante", "ecole", "temps", "adverbes", "physique", "general"];
+const themes = ["maison", "sport", "sante", "ecole", "temps", "adver", "physique", "general"];
 
 const menuEl = document.getElementById("menu");
 const configEl = document.getElementById("config");
@@ -83,7 +83,7 @@ answerEl.addEventListener("keydown", (e) => {
 async function loadVocabulary(theme) {
   try {
     if (theme === "general") {
-      const allFiles = ["maison", "sport", "sante", "ecole", "temps", "adverbes", "physique"];
+      const allFiles = ["maison", "sport", "sante", "ecole", "temps", "adver", "physique"];
       vocabulary = [];
       for (const f of allFiles) {
         const response = await fetch(`vocab/${f}.json`);
