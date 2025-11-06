@@ -1,56 +1,42 @@
-body {
-  font-family: 'Segoe UI', sans-serif;
-  background: #f4f4f8;
-  color: #333;
-  text-align: center;
-  padding: 40px;
-}
-
-h1 { color: #222; margin-bottom: 6px; }
-h2 { color: #555; font-weight: normal; margin-bottom: 12px; }
-
-.menu .buttons, .config-buttons {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 12px;
-  margin: 12px 0 20px;
-}
-
-.theme-btn {
-  padding: 12px 20px;
-  font-size: 18px;
-  border: none;
-  border-radius: 10px;
-  background: #fff;
-  box-shadow: 0 3px 8px rgba(0,0,0,0.08);
-  cursor: pointer;
-  transition: all 0.15s;
-}
-
-.theme-btn:hover {
-  background: #007bff; color: white; transform: translateY(-3px);
-}
+/* Simple, propre et responsive */
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+body { background: #f4f7f8; color: #222; display: flex; justify-content: center; padding: 24px; min-height: 100vh; align-items: flex-start; }
 
 .hidden { display: none; }
 
-#quiz { max-width: 640px; margin: 20px auto; background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 6px 20px rgba(0,0,0,0.06); }
+.menu, .config, .quiz, .recap { background: #fff; padding: 28px 32px; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.08); width: 100%; max-width: 680px; margin-bottom: 18px; text-align: center; }
 
-#answer { padding: 10px; width: 80%; font-size: 16px; margin: 8px 0; border-radius: 8px; border: 1px solid #ccc; }
+h1 { color: #1f618d; margin-bottom: 10px; }
+h2 { color: #1f618d; margin-bottom: 12px; font-weight: 600; }
 
-.controls { display: flex; justify-content: center; gap: 8px; margin-bottom: 8px; }
+.buttons { display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin-bottom:12px; }
+.theme-btn { background:#1f618d; color:#fff; border:none; padding:10px 14px; border-radius:10px; cursor:pointer; transition:transform .12s, background .12s; }
+.theme-btn:hover { transform:translateY(-3px); background:#276f9a; }
 
-#validate, #skip, #startSession, #backToMenu {
-  padding: 10px 16px; font-size: 15px; border-radius: 8px; border: none; cursor: pointer;
+label { display:block; margin-top:10px; margin-bottom:6px; color:#444; }
+input[type="number"], input[type="text"], select { padding:10px; width:80%; max-width:360px; border-radius:8px; border:1px solid #d0d7dd; margin-bottom:10px; font-size:1rem; }
+
+.config-buttons { margin-top:12px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
+
+.controls { display:flex; gap:10px; justify-content:center; margin-top:8px; }
+button { background:#1f618d; color:#fff; border:none; padding:10px 16px; border-radius:8px; cursor:pointer; transition:background .12s, transform .12s; }
+button:hover { background:#276f9a; transform:translateY(-2px); }
+button:disabled { background:#aaa; cursor:not-allowed; transform:none; }
+
+.topbar { display:flex; justify-content:space-between; margin-bottom:8px; gap:10px; max-width:600px; margin-left:auto; margin-right:auto; color:#555; }
+
+#question { font-size:1.15rem; margin:14px 0 8px; min-height:56px; }
+#feedback { font-weight:700; min-height:36px; margin-top:8px; }
+.correct { color:#27ae60; }
+.wrong { color:#c0392b; }
+
+#recap { text-align:left; margin-top:12px; max-width:640px; margin-left:auto; margin-right:auto; }
+#recap li { margin:6px 0; }
+
+.recap-controls { margin-top:14px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
+
+/* responsive */
+@media (max-width:600px) {
+  .menu, .config, .quiz, .recap { padding:16px; }
+  input[type="text"], input[type="number"], select { width:100%; }
 }
-
-#validate { background: #007bff; color: white; }
-#validate:hover { background: #0056b3; }
-#skip { background: #eee; }
-
-.correct { color: green; font-weight: bold; }
-.wrong { color: red; font-weight: bold; }
-
-.topbar { display:flex; justify-content: space-between; margin-bottom: 6px; max-width: 600px; margin-left:auto; margin-right:auto; }
-#recap { text-align: left; max-width: 700px; margin: 18px auto; }
-#recap li { margin-bottom: 6px; }
