@@ -1,22 +1,23 @@
-// script.js — quiz allemand/français amélioré
+/* script.js — Quiz principal avec mode spécial "Verbes irréguliers" (Option 2) */
 
-let vocabulary = [];
+/* -------------------------
+   Variables & DOM nodes
+   ------------------------- */
+let vocabulary = [];           // pour thèmes "normaux" (listes fr/de)
+let irregVerbs = [];           // contenu du JSON des verbes irréguliers
+let mode = "normal";           // "normal" ou "irreg"
 let score = 0;
 let total = 0;
-let usedWords = [];
+let usedIndices = [];
 let results = [];
-let current = null;
-let direction = "de-to-fr";
-let selectedTheme = "";
-let speedSetting = "normal";
-let reviewingMistakes = false;
+let current = null;            // pour normal: {de,fr,...}, pour irreg: {verb, fromField, toField}
 let awaitingContinue = false;
-
-const themes = ["maison", "sport", "sante", "ecole", "temps", "adverbes", "chunks", "irreg_verbes", "physique", "general"];
 
 const menuEl = document.getElementById("menu");
 const configEl = document.getElementById("config");
 const quizEl = document.getElementById("quiz");
+const recapSection = document.getElementById("recapSection");
+
 const nbWordsEl = document.getElementById("nbWords");
 const configTitleEl = document.getElementById("config-title");
 const themeLabelEl = document.getElementById("themeLabel");
@@ -25,254 +26,361 @@ const questionEl = document.getElementById("question");
 const answerEl = document.getElementById("answer");
 const feedbackEl = document.getElementById("feedback");
 const scoreEl = document.getElementById("score");
+
 const validateBtn = document.getElementById("validate");
 const skipBtn = document.getElementById("skip");
 const startBtn = document.getElementById("startSession");
 const backBtn = document.getElementById("backToMenu");
-const speedEl = document.getElementById("speed");
+const restartBtn = document.getElementById("restart");
+const toMenuBtn = document.getElementById("toMenu");
+const reviewBtn = document.getElementById("reviewMistakes");
+const speedSelect = document.getElementById("speed");
 
-// ----- initialisation des listeners -----
+/* available themes for general mode (must have corresponding vocab/*.json files) */
+const themesList = ["maison","sport","sante","ecole","temps","physique","adver","general"];
+
+/* -------------------------
+   Helpers
+   ------------------------- */
+function normalize(s){
+  return String(s || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g,"")
+    .replace(/[’'"\-\u2010-\u2015]/g,"")
+    .replace(/[.,;:!?()]/g,"")
+    .replace(/\s+/g," ")
+    .trim()
+    .toLowerCase();
+}
+function getDelay(isCorrect){
+  const speed = speedSelect ? speedSelect.value : "normal";
+  const map = { fast: isCorrect?500:1000, normal: isCorrect?1000:2000, slow: isCorrect?1500:3000 };
+  return map[speed] || 1000;
+}
+
+/* -------------------------
+   Theme button handling
+   ------------------------- */
 document.querySelectorAll(".theme-btn").forEach(btn => {
   btn.addEventListener("click", async () => {
-    selectedTheme = btn.dataset.theme;
-    await loadVocabulary(selectedTheme);
+    const theme = btn.dataset.theme;
+    // if user chose the irregular verbs theme:
+    if(theme === "irreg"){
+      mode = "irreg";
+      // load irregular verbs JSON
+      try {
+        const res = await fetch("vocab/irreg_verbes.json");
+        if(!res.ok) throw new Error("Impossible de charger /vocab/irreg_verbes.json");
+        irregVerbs = await res.json();
+      } catch(err){
+        alert("Erreur lors du chargement des verbes irréguliers. Ouvre la console pour détails.");
+        console.error(err);
+        return;
+      }
+      configTitleEl.textContent = "Verbes irréguliers";
+      menuEl.classList.add("hidden");
+      configEl.classList.remove("hidden");
+      nbWordsEl.max = irregVerbs.length;
+      nbWordsEl.value = Math.min(10, irregVerbs.length);
+      return;
+    }
+
+    // otherwise normal vocabulary theme
+    mode = "normal";
+    try {
+      // load vocabulary file (or if general, load many)
+      if(theme === "general"){
+        const files = ["maison","sport","sante","ecole","temps","physique","adver"];
+        vocabulary = [];
+        for(const f of files){
+          const r = await fetch(`vocab/${f}.json`);
+          if(!r.ok) throw new Error(`Impossible de charger vocab/${f}.json`);
+          const data = await r.json();
+          vocabulary = vocabulary.concat(data);
+        }
+      } else {
+        const r = await fetch(`vocab/${theme}.json`);
+        if(!r.ok) throw new Error(`Impossible de charger vocab/${theme}.json`);
+        vocabulary = await r.json();
+      }
+    } catch(err){
+      alert("Erreur de chargement du vocabulaire. Ouvre la console pour détails.");
+      console.error(err);
+      return;
+    }
+
+    configTitleEl.textContent = `Thème : ${theme}`;
     menuEl.classList.add("hidden");
-    configTitleEl.textContent = `Thème : ${selectedTheme}`;
     configEl.classList.remove("hidden");
     nbWordsEl.max = vocabulary.length;
     nbWordsEl.value = Math.min(10, vocabulary.length);
   });
 });
 
+/* -------------------------
+   Config buttons
+   ------------------------- */
 backBtn.addEventListener("click", () => {
   configEl.classList.add("hidden");
   menuEl.classList.remove("hidden");
 });
 
 startBtn.addEventListener("click", () => {
-  const requested = parseInt(nbWordsEl.value, 10) || 10;
-  total = Math.min(Math.max(1, requested), vocabulary.length);
-  speedSetting = speedEl ? speedEl.value : "normal";
-  startQuiz();
+  const requested = Math.max(1, parseInt(nbWordsEl.value,10) || 10);
+  const max = mode === "irreg" ? irregVerbs.length : vocabulary.length;
+  total = Math.min(requested, max);
+  // reset
+  usedIndices = [];
+  results = [];
+  score = 0;
+  feedbackEl.textContent = "";
+  answerEl.value = "";
+  // show quiz
+  configEl.classList.add("hidden");
+  recapSection.classList.add("hidden");
+  quizEl.classList.remove("hidden");
+  themeLabelEl.textContent = mode === "irreg" ? "Verbes irréguliers" : "Thème vocabulaire";
+  scoreEl.textContent = `Score : 0 / 0`;
+  // start first question
+  if(mode === "irreg") askIrregQuestion();
+  else askNormalQuestion();
 });
 
+/* validate / skip behavior */
 validateBtn.addEventListener("click", () => {
-  if (awaitingContinue) return;
-  checkAnswer();
+  if(awaitingContinue) return;
+  if(mode === "irreg") checkIrregAnswer();
+  else checkNormalAnswer();
 });
-
 skipBtn.addEventListener("click", () => {
-  if (awaitingContinue) return;
-  recordResult("", false);
-  scoreEl.textContent = `Score : ${score} / ${usedWords.length}`;
-  nextQuestionWithDirection();
+  if(awaitingContinue) return;
+  // record as wrong
+  if(mode === "irreg"){
+    recordIrregResult("", false);
+    nextAfterAnswer(false);
+  } else {
+    recordNormalResult("", false);
+    nextAfterAnswer(false);
+  }
 });
 
+/* keyboard enter handling */
 answerEl.addEventListener("keydown", (e) => {
-  if (e.key === "Enter") {
-    if (awaitingContinue) {
+  if(e.key === "Enter"){
+    if(awaitingContinue){
       const cont = document.getElementById("continueBtn");
-      if (cont) cont.click();
+      if(cont) cont.click();
     } else {
       validateBtn.click();
     }
   }
 });
 
-// ----- chargement vocabulaire -----
-async function loadVocabulary(theme) {
-  try {
-    if (theme === "general") {
-      const allFiles = ["maison", "sport", "sante", "ecole", "temps", "chunks", "adverbes", "irreg_verbes", "physique"];
-      vocabulary = [];
-      for (const f of allFiles) {
-        const response = await fetch(`vocab/${f}.json`);
-        if (!response.ok) throw new Error(`Impossible de charger vocab/${f}.json`);
-        const data = await response.json();
-        data.forEach(e => { e._src = f; });
-        vocabulary = vocabulary.concat(data);
-      }
-    } else {
-      const response = await fetch(`vocab/${theme}.json`);
-      if (!response.ok) throw new Error(`Impossible de charger vocab/${theme}.json`);
-      vocabulary = await response.json();
-      vocabulary.forEach(e => (e._src = theme));
-    }
-    vocabulary.forEach((e,i) => e._idx = i);
-  } catch (err) {
-    alert("Erreur de chargement du vocabulaire ! Ouvre la console pour détails.");
-    console.error(err);
+/* restart / to menu / review mistakes */
+restartBtn.addEventListener("click", ()=> location.reload());
+toMenuBtn.addEventListener("click", ()=> location.href = location.pathname);
+reviewBtn.addEventListener("click", ()=> {
+  // build a new practice set from mistakes
+  const mistakes = results.filter(r => !r.isCorrect);
+  if(mistakes.length === 0) return;
+  if(mode === "irreg"){
+    // replace irregVerbs with mistake verbs (keeping direction info)
+    irregVerbs = mistakes.map(m => ({infinitive: m.infinitive, preteritum: m.preteritum, partizip: m.partizip, "3psPresent": m["3psPresent"], fr: m.fr}));
+    total = irregVerbs.length;
+    usedIndices = [];
+    results = [];
+    score = 0;
+    quizEl.classList.remove("hidden");
+    recapSection.classList.add("hidden");
+    askIrregQuestion();
+  } else {
+    vocabulary = mistakes.map(m => ({de: m.de, fr: m.fr}));
+    total = vocabulary.length;
+    usedIndices = [];
+    results = [];
+    score = 0;
+    quizEl.classList.remove("hidden");
+    recapSection.classList.add("hidden");
+    askNormalQuestion();
   }
-}
+});
 
-// ----- démarrer quiz -----
-function startQuiz(fromMistakes = false) {
-  configEl.classList.add("hidden");
-  quizEl.classList.remove("hidden");
-  score = 0;
-  usedWords = [];
-  results = [];
-  reviewingMistakes = fromMistakes;
-  awaitingContinue = false;
-  themeLabelEl.textContent = reviewingMistakes ? "Révision des erreurs" : `Thème : ${selectedTheme}`;
-  scoreEl.textContent = `Score : 0 / 0`;
-  nextQuestionWithDirection();
-}
-
-// ----- question suivante -----
-function nextQuestionWithDirection() {
+/* -------------------------
+   NORMAL MODE (vocab lists)
+   ------------------------- */
+function askNormalQuestion(){
   awaitingContinue = false;
   validateBtn.disabled = false;
   skipBtn.disabled = false;
-
-  if (usedWords.length >= total) return endSession();
+  if(usedIndices.length >= total) return endSession();
 
   let idx;
-  do {
-    idx = Math.floor(Math.random() * vocabulary.length);
-  } while (usedWords.includes(idx));
-
-  usedWords.push(idx);
+  do { idx = Math.floor(Math.random() * vocabulary.length); } while(usedIndices.includes(idx));
+  usedIndices.push(idx);
   current = vocabulary[idx];
 
-  if (current.direction) {
-    direction = current.direction;
-  } else {
-    direction = Math.random() < 0.5 ? "de-to-fr" : "fr-to-de";
-  }
+  // randomly choose direction
+  const dir = Math.random() < 0.5 ? "de-to-fr" : "fr-to-de";
+  current._dir = dir;
 
-  questionEl.textContent =
-    direction === "de-to-fr"
-      ? `Traduire en français : "${current.de}"`
-      : `Traduire en allemand : "${current.fr}"`;
-
+  questionEl.textContent = dir === "de-to-fr" ? `Traduire en français : "${current.de}"` : `Traduire en allemand : "${current.fr}"`;
   answerEl.value = "";
   answerEl.focus();
   feedbackEl.textContent = "";
-  feedbackEl.className = "";
-  progressEl.textContent = `Mot ${usedWords.length} / ${total}`;
-  scoreEl.textContent = `Score : ${score} / ${Math.max(usedWords.length - 1, 0)}`;
+  progressEl.textContent = `Mot ${usedIndices.length} / ${total}`;
+  scoreEl.textContent = `Score : ${score} / ${Math.max(usedIndices.length - 1,0)}`;
 }
 
-// ----- normalisation tolérante -----
-function normalize(str) {
-  if (!str && str !== "") return "";
-  return String(str)
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[’'"\-\u2010-\u2015]/g, "")
-    .replace(/[.,;:!?()]/g, "")
-    .replace(/\s+/g, " ")
-    .trim()
-    .toLowerCase();
-}
-
-// ----- délai pour bonnes réponses -----
-function getDelay(isCorrect) {
-  const speeds = {
-    fast: isCorrect ? 500 : 1500,
-    normal: isCorrect ? 1000 : 2500,
-    slow: isCorrect ? 1500 : 3000
-  };
-  return speeds[speedSetting] || 1000;
-}
-
-// ----- enregistrement résultat -----
-function recordResult(givenRaw, isCorrect) {
-  results.push({
-    de: current.de,
-    fr: current.fr,
-    direction,
-    expected: direction === "de-to-fr" ? current.fr : current.de,
-    given: givenRaw,
-    isCorrect
-  });
-}
-
-// ----- vérification réponse -----
-function checkAnswer() {
-  if (awaitingContinue) return;
-
+function checkNormalAnswer(){
   const userRaw = answerEl.value;
   const user = normalize(userRaw);
-  const correct = normalize(direction === "de-to-fr" ? current.fr : current.de);
-  const isCorrect = user === correct;
-  recordResult(userRaw, isCorrect);
+  const expected = normalize(current._dir === "de-to-fr" ? current.fr : current.de);
+  const isCorrect = user === expected;
+  recordNormalResult(userRaw, isCorrect);
+  validateBtn.disabled = true;
+  skipBtn.disabled = true;
+
+  if(isCorrect){
+    feedbackEl.textContent = "✅ Correct !";
+    feedbackEl.className = "correct";
+    score++;
+    scoreEl.textContent = `Score : ${score} / ${usedIndices.length}`;
+    setTimeout( () => { askNormalQuestion(); }, getDelay(true));
+  } else {
+    awaitingContinue = true;
+    feedbackEl.innerHTML = `❌ Faux — attendu : <strong>${current._dir === "de-to-fr" ? current.fr : current.de}</strong> <div style="margin-top:10px"><button id="continueBtn">Continuer</button></div>`;
+    feedbackEl.className = "wrong";
+    document.getElementById("continueBtn").focus();
+    document.getElementById("continueBtn").addEventListener("click", () => { awaitingContinue = false; askNormalQuestion(); });
+  }
+}
+
+function recordNormalResult(given, isCorrect){
+  results.push({de: current.de, fr: current.fr, given, isCorrect});
+}
+
+/* -------------------------
+   IRREGULAR VERBS MODE (Option 2)
+   ------------------------- */
+/* fields we can ask for and labels */
+const irregFields = ["infinitive","preteritum","partizip","3psPresent","fr"];
+const irregLabels = {
+  infinitive: "infinitif",
+  preteritum: "prétérit",
+  partizip: "participe passé",
+  "3psPresent": "3e pers. du présent",
+  fr: "traduction française"
+};
+
+function askIrregQuestion(){
+  awaitingContinue = false;
+  validateBtn.disabled = false;
+  skipBtn.disabled = false;
+  if(usedIndices.length >= total) return endSession();
+
+  let idx;
+  do { idx = Math.floor(Math.random() * irregVerbs.length); } while(usedIndices.includes(idx));
+  usedIndices.push(idx);
+  const verb = irregVerbs[idx];
+
+  // choose fromField (the displayed form) and toField (what user must give)
+  let fromField = irregFields[Math.floor(Math.random()*irregFields.length)];
+  let toField;
+  do { toField = irregFields[Math.floor(Math.random()*irregFields.length)]; } while(toField === fromField);
+
+  // current holds the verb and fields
+  current = { verb, fromField, toField };
+
+  const promptValue = verb[fromField];
+  questionEl.textContent = `Quel est le ${irregLabels[toField]} de "${promptValue}" ?`;
+  answerEl.value = "";
+  answerEl.focus();
+  progressEl.textContent = `Verbe ${usedIndices.length} / ${total}`;
+  feedbackEl.textContent = "";
+  scoreEl.textContent = `Score : ${score} / ${Math.max(usedIndices.length - 1,0)}`;
+}
+
+function checkIrregAnswer(){
+  const userRaw = answerEl.value;
+  const user = normalize(userRaw);
+  const expectedRaw = current.verb[current.toField] || "";
+  const expected = normalize(expectedRaw);
+
+  const isCorrect = user === expected;
+  recordIrregResult(userRaw, isCorrect);
 
   validateBtn.disabled = true;
   skipBtn.disabled = true;
 
-  if (isCorrect) {
+  if(isCorrect){
     feedbackEl.textContent = "✅ Correct !";
     feedbackEl.className = "correct";
     score++;
-    scoreEl.textContent = `Score : ${score} / ${usedWords.length}`;
-    setTimeout(nextQuestionWithDirection, getDelay(true));
+    scoreEl.textContent = `Score : ${score} / ${usedIndices.length}`;
+    setTimeout(() => askIrregQuestion(), getDelay(true));
   } else {
     awaitingContinue = true;
-    const expected = direction === "de-to-fr" ? current.fr : current.de;
-    feedbackEl.innerHTML = `
-      ❌ Faux — attendu : <strong>${expected}</strong>
-      <div style="margin-top:10px;">
-        <button id="continueBtn" style="padding:8px 12px; border-radius:6px;">Continuer</button>
-      </div>
-    `;
+    feedbackEl.innerHTML = `❌ Faux — attendu : <strong>${expectedRaw}</strong> <div style="margin-top:10px"><button id="continueBtn">Continuer</button></div>`;
     feedbackEl.className = "wrong";
-
     document.getElementById("continueBtn").focus();
-    document.getElementById("continueBtn").addEventListener("click", () => {
-      awaitingContinue = false;
-      scoreEl.textContent = `Score : ${score} / ${usedWords.length}`;
-      nextQuestionWithDirection();
-    });
+    document.getElementById("continueBtn").addEventListener("click", () => { awaitingContinue = false; askIrregQuestion(); });
   }
 }
 
-// ----- fin de session + option "revoir mes fautes" -----
-function endSession() {
-  const mistakes = results.filter(r => !r.isCorrect);
+function recordIrregResult(given, isCorrect){
+  // store canonical fields so we can review mistakes later
+  const v = current.verb;
+  results.push({
+    infinitive: v.infinitive,
+    preteritum: v.preteritum,
+    partizip: v.partizip,
+    "3psPresent": v["3psPresent"],
+    fr: v.fr,
+    askedFrom: current.fromField,
+    askedTo: current.toField,
+    given,
+    isCorrect
+  });
+}
 
-  document.body.innerHTML = `
-    <div style="padding:24px; text-align:center;">
-      <h1>Session terminée 🎉</h1>
-      <p>${reviewingMistakes ? "Fin de la révision des erreurs" : `Thème : <strong>${selectedTheme}</strong>`}</p>
-      <p>Score : <strong>${score} / ${total}</strong></p>
-      <h2>Récapitulatif</h2>
-      <ul id="recap" style="text-align:left; max-width:800px; margin:12px auto;"></ul>
-      <div style="margin-top:16px;">
-        <button id="restart" style="margin-right:8px; padding:8px 12px;">Recommencer</button>
-        <button id="toMenu" style="margin-right:8px; padding:8px 12px;">Retour au menu</button>
-        ${!reviewingMistakes && mistakes.length > 0 ? `<button id="reviewMistakes" style="padding:8px 12px;">Revoir mes fautes (${mistakes.length})</button>` : ""}
-      </div>
-    </div>
-  `;
+/* -------------------------
+   Common end / recap
+   ------------------------- */
+function nextAfterAnswer(wasCorrect){
+  if(mode==="irreg") askIrregQuestion(); else askNormalQuestion();
+}
 
-  const recapEl = document.getElementById("recap");
+function endSession(){
+  // hide quiz show recap
+  quizEl.classList.add("hidden");
+  recapSection.classList.remove("hidden");
+
+  // build recap list
+  const recapList = document.getElementById("recap");
+  recapList.innerHTML = "";
+
   results.forEach(r => {
-    const li = document.createElement("li");
-    const mark = r.isCorrect ? "🟢" : "🔴";
-    li.innerHTML = `${mark} <strong>${r.direction === "de-to-fr" ? r.de : r.fr}</strong> — ta réponse : "${r.given || "—"}" — attendu : "${r.expected}"`;
-    recapEl.appendChild(li);
+    let li = document.createElement("li");
+    if(mode === "irreg"){
+      const askedLabel = irregLabels[r.askedTo] || r.askedTo;
+      const askedValue = r[r.askedTo] || "";
+      li.innerHTML = `${r.isCorrect ? "🟢" : "🔴"} <strong>${r.infinitive}</strong> — demandé: ${askedLabel} — ta réponse : "${r.given || "—"}" — attendu : "${askedValue}"`;
+    } else {
+      li.innerHTML = `${r.isCorrect ? "🟢" : "🔴"} <strong>${r.de}</strong> — ta réponse : "${r.given || "—"}" — attendu : "${r.fr}"`;
+    }
+    recapList.appendChild(li);
   });
 
-  document.getElementById("restart").addEventListener("click", () => location.reload());
-  document.getElementById("toMenu").addEventListener("click", () => location.href = location.pathname);
-
-  const reviewBtn = document.getElementById("reviewMistakes");
-  if (reviewBtn) {
-    reviewBtn.addEventListener("click", () => {
-      vocabulary = mistakes.map(m => ({
-        de: m.de,
-        fr: m.fr,
-        direction: m.direction
-      }));
-      total = vocabulary.length;
-      usedWords = [];
-      results = [];
-      reviewingMistakes = true;
-      awaitingContinue = false;
-      nextQuestionWithDirection();
-    });
+  // show / hide review button
+  const mistakes = results.filter(x => !x.isCorrect);
+  if(mistakes.length > 0) {
+    reviewBtn.classList.remove("hidden");
+    reviewBtn.textContent = `Revoir mes fautes (${mistakes.length})`;
+  } else {
+    reviewBtn.classList.add("hidden");
   }
 }
 
+/* -------------------------
+   End of script
+   ------------------------- */
