@@ -14,30 +14,29 @@
       <button class="theme-btn" data-theme="sport">⚽ Sport</button>
       <button class="theme-btn" data-theme="sante">🏥 Santé</button>
       <button class="theme-btn" data-theme="ecole">🏫 École</button>
-      <button class="theme-btn" data-theme="temps">⛅ Temps_jours_saison</button>
-      <button class="theme-btn" data-theme="physique">Le_Physique</button>
-      <button class="theme-btn" data-theme="adverbes">Adverbes</button>
-      <button class="theme-btn" data-theme="chunks">Chunks</button>
-      <button class="theme-btn" data-theme="irrg_verbes">Verbes_irreguliers</button>    
+      <button class="theme-btn" data-theme="temps">⛅ Temps</button>
+      <button class="theme-btn" data-theme="physique">🧍 Physique</button>
+      <button class="theme-btn" data-theme="adver">🗣️ Adverbes</button>
       <button class="theme-btn" data-theme="general">🌍 Général</button>
+      <button class="theme-btn" data-theme="irreg">📘 Verbes irréguliers</button>
     </div>
   </div>
 
-  <!-- Écran de configuration (choix nombre de mots) -->
+  <!-- Configuration -->
   <div id="config" class="config hidden">
     <h2 id="config-title">Thème</h2>
-    <label for="nbWords">Nombre de mots à tester :</label>
-    <input id="nbWords" type="number" min="1" value="10" />
-    <div class="config-buttons">
-      <div>
-  <label for="speed">Vitesse de défilement :</label>
-  <select id="speed">
-    <option value="normal" selected>⚖️ Normale</option>
-    <option value="fast">🐇 Rapide</option>
-    <option value="slow">🐢 Lente</option>
-  </select>
-</div>
 
+    <label for="nbWords">Nombre de items à tester :</label>
+    <input id="nbWords" type="number" min="1" value="10" />
+
+    <label for="speed">Vitesse de défilement :</label>
+    <select id="speed">
+      <option value="normal" selected>⚖️ Normale</option>
+      <option value="fast">🐇 Rapide</option>
+      <option value="slow">🐢 Lente</option>
+    </select>
+
+    <div class="config-buttons">
       <button id="startSession">Démarrer la session</button>
       <button id="backToMenu">Retour</button>
     </div>
@@ -50,7 +49,7 @@
       <p id="progress"></p>
     </div>
 
-    <h1>Quiz de vocabulaire 🇩🇪</h1>
+    <h1 id="quizTitle">Quiz</h1>
     <p id="question">Chargement...</p>
 
     <input type="text" id="answer" placeholder="Ta réponse ici" autocomplete="off" />
@@ -61,6 +60,17 @@
 
     <p id="feedback"></p>
     <p id="score"></p>
+  </div>
+
+  <!-- Récap -->
+  <div id="recapSection" class="hidden">
+    <h2>Récapitulatif</h2>
+    <ul id="recap"></ul>
+    <div class="recap-controls">
+      <button id="restart">Recommencer</button>
+      <button id="toMenu">Retour au menu</button>
+      <button id="reviewMistakes" class="hidden">Revoir mes fautes</button>
+    </div>
   </div>
 
   <script src="script.js"></script>
